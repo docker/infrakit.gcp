@@ -28,6 +28,7 @@ type instanceProperties struct {
 	MachineType string
 	Network     string
 	DiskSizeMb  int64
+	SourceImage string
 	Tags        []string
 	Scopes      []string
 	TargetPool  string
@@ -117,6 +118,7 @@ func (p *plugin) Provision(spec instance.Spec) (*instance.ID, error) {
 		Network:     properties.Network,
 		Tags:        properties.Tags,
 		DiskSizeMb:  properties.DiskSizeMb,
+		SourceImage: properties.SourceImage,
 		Scopes:      properties.Scopes,
 		MetaData:    gcloud.TagsToMetaData(tags),
 	}); err != nil {

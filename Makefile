@@ -82,3 +82,7 @@ coverage:
 test-full:
 	@echo "+ $@"
 	@go test -race $(PKGS)
+
+vendor-update:
+	@echo "+ $@"
+	@trash -u
