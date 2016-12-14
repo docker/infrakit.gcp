@@ -40,6 +40,7 @@ type InstanceSettings struct {
 	Tags        []string
 	Scopes      []string
 	DiskSizeMb  int64
+	SourceImage string
 	MetaData    []*compute.MetadataItems
 }
 
@@ -129,6 +130,10 @@ func (g *computeServiceWrapper) ListInstances() ([]*compute.Instance, error) {
 }
 
 func (g *computeServiceWrapper) CreateInstance(name string, settings *InstanceSettings) error {
+	diskImage := apiURL + g.project + "/global/images/docker"
+	if settings.SourceImage != "" {
+		diskImage = settings.SourceImage
+	}
 	instance := &compute.Instance{
 		Name:        name,
 		Description: settings.Description,
@@ -144,7 +149,7 @@ func (g *computeServiceWrapper) CreateInstance(name string, settings *InstanceSe
 				Mode:       "READ_WRITE",
 				InitializeParams: &compute.AttachedDiskInitializeParams{
 					DiskName:    name + "-disk",
-					SourceImage: apiURL + g.project + "/global/images/docker",
+					SourceImage: diskImage,
 					DiskSizeGb:  settings.DiskSizeMb,
 					DiskType:    apiURL + g.project + "/zones/" + g.zone + "/diskTypes/" + "pd-standard",
 				},
