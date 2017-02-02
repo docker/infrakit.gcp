@@ -1,7 +1,6 @@
 package group
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -73,24 +72,22 @@ func (p *plugin) validate(groupSpec group.Spec) (settings, error) {
 		return noSettings, fmt.Errorf("Failed to find Flavor plugin '%s':%v", spec.Flavor.Plugin, err)
 	}
 
-	err = flavorPlugin.Validate(types.RawMessage(spec.Flavor.Properties), spec.Allocation)
+	err = flavorPlugin.Validate(spec.Flavor.Properties, spec.Allocation)
 	if err != nil {
 		return noSettings, err
 	}
-
-	rawInstanceProperties := json.RawMessage(spec.Instance.Properties.Bytes())
 
 	instanceSpec := instance.Spec{
 		Tags:       map[string]string{},
-		Properties: &rawInstanceProperties,
+		Properties: spec.Instance.Properties,
 	}
 
-	instanceSpec, err = flavorPlugin.Prepare(types.RawMessage(spec.Flavor.Properties), instanceSpec, spec.Allocation)
+	instanceSpec, err = flavorPlugin.Prepare(spec.Flavor.Properties, instanceSpec, spec.Allocation)
 	if err != nil {
 		return noSettings, err
 	}
 
-	instanceProperties, err := instance_types.ParseProperties(instance_types.RawMessage(instanceSpec.Properties))
+	instanceProperties, err := instance_types.ParseProperties(instanceSpec.Properties)
 	if err != nil {
 		return noSettings, err
 	}
