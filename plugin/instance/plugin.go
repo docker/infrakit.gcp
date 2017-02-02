@@ -1,15 +1,15 @@
 package instance
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/infrakit.gcp/plugin/gcloud"
-	"github.com/docker/infrakit.gcp/plugin/instance/types"
+	instance_types "github.com/docker/infrakit.gcp/plugin/instance/types"
 	"github.com/docker/infrakit.gcp/plugin/instance/util"
 	"github.com/docker/infrakit/pkg/spi/instance"
+	"github.com/docker/infrakit/pkg/types"
 )
 
 type plugin struct {
@@ -29,21 +29,26 @@ func NewGCEInstancePlugin(project, zone string) instance.Plugin {
 	}
 }
 
-func (p *plugin) Validate(req json.RawMessage) error {
-	log.Debugln("validate", string(req))
+func (p *plugin) Validate(req *types.Any) error {
+	log.Debugln("validate", req.String())
 
-	parsed := types.Properties{}
+	parsed := instance_types.Properties{}
+	return req.Decode(&parsed)
+}
 
-	return json.Unmarshal([]byte(req), &parsed)
+func (p *plugin) Label(instance instance.ID, labels map[string]string) error {
+	metadata := gcloud.TagsToMetaData(labels)
+
+	return p.API.AddInstanceMetadata(string(instance), metadata)
 }
 
 func (p *plugin) Provision(spec instance.Spec) (*instance.ID, error) {
-	properties, err := types.ParseProperties(types.RawMessage(spec.Properties))
+	properties, err := instance_types.ParseProperties(spec.Properties)
 	if err != nil {
 		return nil, err
 	}
 
-	metadata, err := types.ParseMetadata(spec)
+	metadata, err := instance_types.ParseMetadata(spec)
 	if err != nil {
 		return nil, err
 	}
@@ -130,5 +135,5 @@ func (p *plugin) DescribeInstances(tags map[string]string) ([]instance.Descripti
 
 func last(url string) string {
 	parts := strings.Split(url, "/")
-	return parts[len(parts)-1]
+	return parts[len(parts) - 1]
 }
