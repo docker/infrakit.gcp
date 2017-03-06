@@ -11,6 +11,7 @@ import (
 	"github.com/docker/infrakit/pkg/spi/flavor"
 	"github.com/docker/infrakit/pkg/spi/instance"
 	"github.com/docker/infrakit/pkg/types"
+	"time"
 )
 
 // Spec is the model of the plugin Properties.
@@ -21,10 +22,11 @@ type Spec struct {
 type flavorCombo struct {
 	API           gcloud.API
 	flavorPlugins group.FlavorPluginLookup
+	minAge        time.Duration
 }
 
 // NewPlugin creates a Flavor Combo plugin that chains multiple flavors in a sequence.
-func NewPlugin(flavorPlugins group.FlavorPluginLookup, project, zone string) flavor.Plugin {
+func NewPlugin(flavorPlugins group.FlavorPluginLookup, project, zone string, minAge time.Duration) flavor.Plugin {
 	api, err := gcloud.New(project, zone)
 	if err != nil {
 		log.Fatal(err)
@@ -33,6 +35,7 @@ func NewPlugin(flavorPlugins group.FlavorPluginLookup, project, zone string) fla
 	return flavorCombo{
 		API:           api,
 		flavorPlugins: flavorPlugins,
+		minAge:        minAge,
 	}
 }
 
@@ -53,7 +56,15 @@ func (f flavorCombo) Healthy(flavorProperties *types.Any, inst instance.Descript
 	case "STOPPED", "STOPPING", "SUSPENDED", "SUSPENDING", "TERMINATED":
 		return flavor.Unhealthy, nil
 	case "RUNNING":
-		return flavor.Healthy, nil
+		creation, err := time.Parse(time.RFC3339, instance.CreationTimestamp)
+		if err != nil {
+			return flavor.Unknown, err
+		}
+
+		if creation.Add(f.minAge).Before(time.Now()) {
+			return flavor.Healthy, nil
+		}
+		return flavor.Unknown, nil
 	case "PROVISIONING", "STAGING":
 		return flavor.Unknown, nil
 	}

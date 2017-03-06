@@ -10,6 +10,7 @@ import (
 	flavor_client "github.com/docker/infrakit/pkg/rpc/flavor"
 	flavor_plugin "github.com/docker/infrakit/pkg/spi/flavor"
 	"github.com/spf13/cobra"
+	"time"
 )
 
 func main() {
@@ -22,6 +23,7 @@ func main() {
 	logLevel := cmd.Flags().Int("log", cli.DefaultLogLevel, "Logging level. 0 is least verbose. Max is 5")
 	project := cmd.Flags().String("project", "", "Google Cloud project")
 	zone := cmd.Flags().String("zone", "", "Google Cloud zone")
+	minAge := cmd.Flags().Duration("minAge", 30*time.Second, "Min age to be considered healthy")
 
 	cmd.RunE = func(c *cobra.Command, args []string) error {
 		cli.SetLogLevel(*logLevel)
@@ -39,7 +41,7 @@ func main() {
 			return flavor_client.NewClient(n, endpoint.Address)
 		}
 
-		cli.RunPlugin(*name, flavor_client.PluginServer(flavor.NewPlugin(flavorPluginLookup, *project, *zone)))
+		cli.RunPlugin(*name, flavor_client.PluginServer(flavor.NewPlugin(flavorPluginLookup, *project, *zone, *minAge)))
 
 		return nil
 	}
