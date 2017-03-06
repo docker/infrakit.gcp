@@ -11,6 +11,11 @@ import (
 	"github.com/docker/infrakit/pkg/spi/flavor"
 	"github.com/docker/infrakit/pkg/spi/instance"
 	"github.com/docker/infrakit/pkg/types"
+	"time"
+)
+
+const (
+	HealthyRunning = 30 * time.Second
 )
 
 // Spec is the model of the plugin Properties.
@@ -53,7 +58,15 @@ func (f flavorCombo) Healthy(flavorProperties *types.Any, inst instance.Descript
 	case "STOPPED", "STOPPING", "SUSPENDED", "SUSPENDING", "TERMINATED":
 		return flavor.Unhealthy, nil
 	case "RUNNING":
-		return flavor.Healthy, nil
+		creation, err := time.Parse(time.RFC3339, instance.CreationTimestamp)
+		if err != nil {
+			return flavor.Unknown, err
+		}
+
+		if creation.Add(HealthyRunning).Before(time.Now()) {
+			return flavor.Healthy, nil
+		}
+		return flavor.Unknown, nil
 	case "PROVISIONING", "STAGING":
 		return flavor.Unknown, nil
 	}
