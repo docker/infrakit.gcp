@@ -202,7 +202,7 @@ func TestDescribeEmptyInstances(t *testing.T) {
 	api.EXPECT().ListInstances().Return([]*compute.Instance{}, nil)
 
 	plugin := NewPlugin(api)
-	instances, err := plugin.DescribeInstances(nil)
+	instances, err := plugin.DescribeInstances(nil, false)
 
 	require.NoError(t, err)
 	require.Empty(t, instances)
@@ -272,7 +272,7 @@ func TestDescribeInstances(t *testing.T) {
 	}, nil)
 
 	plugin := NewPlugin(api)
-	instances, err := plugin.DescribeInstances(tags)
+	instances, err := plugin.DescribeInstances(tags, false)
 
 	require.NoError(t, err)
 	require.Equal(t, len(instances), 2)
@@ -287,7 +287,7 @@ func TestDescribeInstancesFails(t *testing.T) {
 	api.EXPECT().ListInstances().Return(nil, errors.New("BUG"))
 
 	plugin := NewPlugin(api)
-	instances, err := plugin.DescribeInstances(nil)
+	instances, err := plugin.DescribeInstances(nil, false)
 
 	require.EqualError(t, err, "BUG")
 	require.Nil(t, instances)
