@@ -16,6 +16,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/api/compute/v1"
+	"time"
 )
 
 func logicalID(v string) *instance.LogicalID {
@@ -172,24 +173,29 @@ func TestMergeNoLogicalID(t *testing.T) {
 
 func TestHealthy(t *testing.T) {
 	var tests = []struct {
-		status         string
-		expectedHealth flavor.Health
-		expectedError  error
+		status            string
+		creationTimestamp string
+		expectedHealth    flavor.Health
+		expectedError     error
 	}{
-		{"STOPPED", flavor.Unhealthy, nil},
-		{"STOPPING", flavor.Unhealthy, nil},
-		{"SUSPENDED", flavor.Unhealthy, nil},
-		{"SUSPENDING", flavor.Unhealthy, nil},
-		{"TERMINATED", flavor.Unhealthy, nil},
-		{"RUNNING", flavor.Healthy, nil},
-		{"PROVISIONING", flavor.Unknown, nil},
-		{"STAGING", flavor.Unknown, nil},
-		{"", flavor.Unknown, nil},
+		{"STOPPED", "", flavor.Unhealthy, nil},
+		{"STOPPING", "", flavor.Unhealthy, nil},
+		{"SUSPENDED", "", flavor.Unhealthy, nil},
+		{"SUSPENDING", "", flavor.Unhealthy, nil},
+		{"TERMINATED", "", flavor.Unhealthy, nil},
+		{"RUNNING", time.Now().Format(time.RFC3339), flavor.Unknown, nil},
+		{"RUNNING", time.Now().Add(-40 * time.Second).Format(time.RFC3339), flavor.Healthy, nil},
+		{"PROVISIONING", "", flavor.Unknown, nil},
+		{"STAGING", "", flavor.Unknown, nil},
+		{"", "", flavor.Unknown, nil},
 	}
 
 	for _, test := range tests {
 		api, _ := NewMockGCloud(t)
-		api.EXPECT().GetInstance("vm-1").Return(&compute.Instance{Status: test.status}, nil)
+		api.EXPECT().GetInstance("vm-1").Return(&compute.Instance{
+			Status:            test.status,
+			CreationTimestamp: test.creationTimestamp,
+		}, nil)
 
 		plugin := NewFlavorPlugin(api)
 		health, err := plugin.Healthy(nil, instance.Description{
